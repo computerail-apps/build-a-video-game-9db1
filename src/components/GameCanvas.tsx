@@ -5,7 +5,7 @@ import { Button } from '@/lib/ui/Button';
 import { Alert, AlertTitle, AlertDescription } from '@/lib/ui/Alert';
 import { Rocket, Trophy, RotateCcw, Send, CheckCircle2 } from 'lucide-react';
 import { useCurrentUser } from '@/components/AuthMenu';
-import type { ScoreEntry } from '@/components/LeaderboardTable';
+import { supabase } from '@/lib/supabase';
 
 type Phase = 'idle' | 'playing' | 'dead';
 
@@ -35,6 +35,7 @@ export function GameCanvas() {
   const [finalScore, setFinalScore] = useState(0);
   const [finalElapsed, setFinalElapsed] = useState(0);
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const { data: user } = useCurrentUser();
   const qc = useQueryClient();
@@ -85,6 +86,7 @@ export function GameCanvas() {
     setScore(0);
     setElapsed(0);
     setSubmitState('idle');
+    setSubmitError(null);
     setPhase('playing');
   }, [resize]);
 
@@ -266,19 +268,18 @@ export function GameCanvas() {
   const submitScore = useCallback(async () => {
     if (!user) return;
     setSubmitState('submitting');
+    setSubmitError(null);
     try {
-      // Phase 2 will replace this with a real Supabase insert + refetch.
-      const entry: ScoreEntry = {
-        id: `local-${Date.now()}`,
+      const { error } = await supabase.from('scores').insert({
         player_name: user.name,
         score: finalScore,
         survival_seconds: Number(finalElapsed.toFixed(1)),
-        created_at: new Date().toISOString(),
-      };
-      qc.setQueryData<ScoreEntry[]>(['scores'], (prev) => (prev ? [entry, ...prev] : [entry]));
-      await new Promise((r) => setTimeout(r, 300));
+      });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ['scores'] });
       setSubmitState('done');
-    } catch {
+    } catch (err) {
+      setSubmitError((err as Error).message);
       setSubmitState('error');
     }
   }, [user, finalScore, finalElapsed, qc]);
@@ -351,7 +352,7 @@ export function GameCanvas() {
               ) : submitState === 'error' ? (
                 <Alert variant="destructive" className="max-w-sm text-left">
                   <AlertTitle>Couldn't submit score</AlertTitle>
-                  <AlertDescription>Something went wrong. Try again.</AlertDescription>
+                  <AlertDescription>{submitError ?? 'Something went wrong. Try again.'}</AlertDescription>
                 </Alert>
               ) : null}
 

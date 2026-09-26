@@ -3,11 +3,13 @@ import { LeaderboardTable } from '@/components/LeaderboardTable';
 
 export function LeaderboardPage() {
   return (
-    <div className="py-6 md:py-8">
+    <div className="py-8">
       <Container>
         <div className="mb-6 space-y-1">
-          <h1 className="text-h1 text-foreground">All-time leaderboard</h1>
-          <p className="text-body text-muted-foreground">Ranked by best survival score across every pilot.</p>
+          <h1 className="text-h1 text-foreground">Leaderboard</h1>
+          <p className="text-body text-muted-foreground">
+            Every signed-in pilot's best run, ranked by survival score across the whole void.
+          </p>
         </div>
         <LeaderboardTable />
       </Container>
